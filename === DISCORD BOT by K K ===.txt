@@ -1,0 +1,119 @@
+// === DISCORD BOT by K K ===
+// A smart, fun, and safe Discord bot 😎
+
+const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const axios = require("axios");
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent,
+  ],
+  partials: [Partials.Channel],
+});
+
+const DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN";
+const OPENROUTER_KEY = "YOUR_OPENROUTER_API_KEY"; // create one at openrouter.ai
+const ADMIN_ID = "YOUR_DISCORD_USER_ID"; // bot will DM you if abuse happens
+
+// ✅ 1. When bot starts
+client.once("ready", () => {
+  console.log(`🤖 Logged in as ${client.user.tag}`);
+  client.user.setActivity("Chatting & Games 🎮");
+});
+
+// 👋 2. Welcome new members
+client.on("guildMemberAdd", member => {
+  const channel = member.guild.systemChannel;
+  if (!channel) return;
+  channel.send(`Welcome to the server, ${member}! 🎉\nI’m your friendly assistant — type \`!help\` to see what I can do!`);
+});
+
+// 🧠 3. Chat system using AI (via OpenRouter API)
+client.on("messageCreate", async msg => {
+  if (msg.author.bot) return;
+
+  const text = msg.content.toLowerCase();
+
+  // 🧹 4. Check for bad language
+  const badWords = ["fuck", "bitch", "asshole", "slut", "nigger", "cunt", "dick"];
+  if (badWords.some(w => text.includes(w))) {
+    await msg.delete().catch(() => {});
+    const admin = await client.users.fetch(ADMIN_ID);
+    if (admin) {
+      admin.send(`⚠️ Abusive message deleted from ${msg.author.tag}:\n"${msg.content}" in #${msg.channel.name}`);
+    }
+    return;
+  }
+
+  // 🎮 5. Fun Commands
+  if (text === "!help") {
+    msg.reply(
+      "**Here’s what I can do:**\n" +
+      "🗣️ Chat about anything — just mention me or type `!chat <message>`\n" +
+      "🎯 Play `!luckdraw`\n" +
+      "😂 Tell a joke with `!joke`\n" +
+      "🚨 Keeps chat clean & reports bad words\n"
+    );
+    return;
+  }
+
+  if (text === "!joke") {
+    const jokes = [
+      "Why did the scarecrow win an award? Because he was outstanding in his field! 🌾",
+      "I tried to catch fog yesterday — Mist! 😆",
+      "Why don’t skeletons fight each other? They don’t have the guts 💀",
+      "I told my computer I needed a break, and it froze 🧊"
+    ];
+    msg.reply(jokes[Math.floor(Math.random() * jokes.length)]);
+    return;
+  }
+
+  if (text === "!luckdraw") {
+    const prizes = ["🎁 Nitro Gift", "💰 10,000 coins", "🍪 Cookie", "🎮 Game night ticket", "👻 Nothing... try again!"];
+    const winner = prizes[Math.floor(Math.random() * prizes.length)];
+    msg.reply(`Spinning the wheel... 🎡 You got **${winner}**!`);
+    return;
+  }
+
+  // 🗣️ 6. AI chat feature
+  if (msg.mentions.has(client.user) || text.startsWith("!chat")) {
+    const userMessage = msg.content.replace(/<@!?(\d+)>/, "").replace("!chat", "").trim();
+    if (!userMessage) return msg.reply("What do you wanna talk about? 😄");
+
+    msg.channel.sendTyping();
+
+    try {
+      const res = await axios.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          model: "meta-llama/llama-3-8b-instruct",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a friendly Discord bot who loves chatting about everything — F1, anime, food, games, and life. Keep responses casual, funny, and respectful.",
+            },
+            { role: "user", content: userMessage },
+          ],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const reply = res.data.choices[0].message.content;
+      msg.reply(reply);
+    } catch (err) {
+      console.error("AI error:", err.response?.data || err.message);
+      msg.reply("My brain’s tired 💤 — try again later!");
+    }
+  }
+});
+
+client.login(DISCORD_TOKEN);
