@@ -14,7 +14,7 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-const DISCORD_TOKEN = "YOUR_DISCORD_BOT_TOKEN";
+const DISCORD_TOKEN = "Brick";
 const OPENROUTER_KEY = "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";
 const ADMIN_ID = "Cookie3343";
 
@@ -117,4 +117,5 @@ client.on("messageCreate", async msg => {
 });
 
 client.login(DISCORD_TOKEN);
+
 
